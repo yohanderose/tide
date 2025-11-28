@@ -5,9 +5,10 @@ Open source client-side menstrual tracker with ML predictions and zero data coll
 - [x] track periods, ovulation and related symptoms
 - [x] ml model for cycle len prediction
 - [x] adding numbered days to tracked cycles
-- [ ] export/import user data
+- [x] export/import user data
 - [ ] further opts sexual activity, exercise, medication, miscarriage/abortion
 - [ ] ml model ovulation day prediction
+- [ ] tidy jupyter and writeup
 
 ## Features
 

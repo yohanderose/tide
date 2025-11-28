@@ -13,6 +13,8 @@ import {
   Brain,
   Spline,
   Egg,
+  Download,
+  ArrowBigUpDash,
 } from "lucide-react";
 import { v7 as uuidv7 } from "uuid";
 
@@ -76,6 +78,7 @@ function App() {
   });
   const scrollRef = useRef(null);
   const loadingRef = useRef(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     initializeUser();
@@ -314,9 +317,6 @@ function App() {
       updatedAt: new Date().toISOString(),
     };
 
-    if (new Date(selectedDate) < earliestEntry) setEarliestEntry(selectedDate);
-    else setEarliestEntry(earliestEntry);
-
     await saveToIndexedDB("entries", entry);
     setEntries((prev) => {
       const newEntries = { ...prev, [selectedDate]: entry };
@@ -396,32 +396,47 @@ function App() {
         <button
           key={day}
           onClick={() => handleDayClick(day, date)}
-          className={`h-10 sm:h-12 md:h-14 rounded-full flex flex-col items-center justify-center transition-all hover:bg-rose-50 relative
-            ${isToday ? "text-primary" : ""}
-            ${nextCyclePred && dateStr == nextCyclePred ? "outline-dotted outline-4 outline-rose-400 " : ""}
-            ${
-              entry?.isPeriod
-                ? entry?.flow == FLOW_LEVELS[0]
-                  ? "bg-rose-100"
-                  : entry?.flow == FLOW_LEVELS[1]
-                    ? "bg-rose-200"
-                    : entry?.flow == FLOW_LEVELS[2]
-                      ? "bg-rose-300"
-                      : entry?.flow == FLOW_LEVELS[3]
-                        ? "bg-rose-400"
-                        : ""
-                : ""
-            }
-            ${entry?.isOvulating ? "bg-yellow-200" : ""}
-          `}
+          className={`h-10 grid grid-cols-3 grid-rows-3 transition-all hover:bg-rose-50 relative
+    ${isToday ? "text-primary" : ""}
+  ${entry?.isOvulating ? "rounded-full text-yellow-800 bg-yellow-200" : ""}
+  ${
+    entry?.isPeriod
+      ? "rounded-full text-rose-800 " +
+        (entry?.flow == FLOW_LEVELS[0]
+          ? "bg-rose-50"
+          : entry?.flow == FLOW_LEVELS[1]
+            ? "bg-rose-100"
+            : entry?.flow == FLOW_LEVELS[2]
+              ? "bg-rose-200"
+              : entry?.flow == FLOW_LEVELS[3]
+                ? "bg-rose-300"
+                : "")
+      : ""
+  }
+  `}
         >
-          <span className="text-s sm:text-m">{day}</span>
-          {entry?.symptoms && entry.symptoms.length > 0 && (
-            <div className="absolute top-0.5 sm:top-1 right-0.5 sm:right-1 w-1 h-1 sm:w-2 sm:h-2 bg-primary rounded-full"></div>
-          )}
+          <div
+            className={`absolute inset-0 m-auto w-10 h-10 z-10 pointer-events-none flex items-center justify-center opacity-50
+  ${nextCyclePred && dateStr == nextCyclePred ? "rounded-full outline-dotted outline-6 outline-rose-800 animate-spin [animation-duration:12s]" : ""}
+  `}
+          ></div>
+
+          {/* Top-left: Cycle counter */}
           {earliestEntry && mostRecentStart && cycleWindowCounter > 0 && (
-            <div className="absolute bottom-0.5 sm:bottom-1 right-0.5 sm:right-1 w-1 h-1 sm:w-2 sm:h-2 text-xs sm:text-xs text-gray-400">
+            <div className="text-[0.6rem] text-gray-500 col-start-1 row-start-1 self-start justify-self-start p-0.5">
               {cycleWindowCounter}
+            </div>
+          )}
+
+          {/* Center: Day number */}
+          <span className="text-base col-start-2 row-start-2 self-center justify-self-center">
+            {day}
+          </span>
+
+          {/* Top-right: Symptoms indicator */}
+          {entry?.symptoms && entry.symptoms.length > 0 && (
+            <div className="col-start-3 row-start-1 self-start justify-self-end p-1">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
             </div>
           )}
         </button>,
@@ -451,14 +466,64 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-gray100 to-blue-50">
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
-        <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-rose-400 to-pink-500 rounded-2xl flex items-center justify-center">
-            <Eclipse className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className="flex justify-between gap-2 sm:gap-3 mb-6 sm:mb-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-rose-400 to-pink-500 rounded-2xl flex items-center justify-center">
+              <Eclipse className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Tide
+              </h1>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Tide
-            </h1>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const json = JSON.stringify(entries, null, 2);
+                const blob = new Blob([json], { type: "text/json" });
+                const url = URL.createObjectURL(blob);
+
+                const today = new Date().toISOString().split("T")[0];
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `${today}_tide.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download />
+            </button>
+            <button onClick={() => fileInputRef.current?.click()}>
+              <ArrowBigUpDash />
+              <input
+                type="file"
+                accept="application/json"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = async (event) => {
+                    try {
+                      const json = JSON.parse(event.target.result);
+                      for (const [_, val] of Object.entries(json)) {
+                        await saveToIndexedDB("entries", val);
+                      }
+                      setEntries(json);
+                    } catch (error) {
+                      console.error("Error parsing JSON import:", error);
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+            </button>
           </div>
         </div>
 
